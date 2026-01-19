@@ -9,18 +9,18 @@ INDEX_FILE = Path("index.html")
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return INDEX_FILE.read_text()
+    return INDEX_FILE.read_text(encoding="utf-8")
 
 @app.get("/details")
 def details():
     html_file = Path(__file__).parent / "rl_cartpole_details.html"
-    return HTMLResponse(content=html_file.read_text())
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 @app.get("/metrics")
 def metrics():
     if not METRICS_FILE.exists():
         return JSONResponse({"status": "waiting"})
-    return JSONResponse(json.loads(METRICS_FILE.read_text()))
+    return JSONResponse(json.loads(METRICS_FILE.read_text(encoding="utf-8")))
 
 from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="."), name="static")

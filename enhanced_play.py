@@ -28,21 +28,15 @@ def main():
     clock = pygame.time.Clock()
 
     # Load Assets
+    mascot_img = None
     try:
-        background = pygame.image.load("background.png").convert()
-        background = pygame.transform.scale(background, (WIDTH, HEIGHT))
-        
-        cart_img = pygame.image.load("cart.png").convert_alpha()
-        cart_img.set_colorkey((255, 255, 255))
-        cart_img = pygame.transform.scale(cart_img, (CART_WIDTH, CART_HEIGHT))
-        
-        pole_img = pygame.image.load("pole.png").convert_alpha()
-        pole_img.set_colorkey((255, 255, 255))
-        # Scale pole height, width stays relatively small
-        pole_img = pygame.transform.scale(pole_img, (POLE_WIDTH, POLE_LENGTH))
+        mascot_img = pygame.image.load("mascot.png").convert_alpha()
+        mascot_img = pygame.transform.scale(mascot_img, (100, 100)) # Scale mascot
     except Exception as e:
-        print(f"Error loading assets: {e}")
-        return
+        print(f"Error loading mascot: {e}")
+        # Proceed without mascot if missing
+
+    # Procedural assets (no images needed for cart/pole anymore)
 
     obs, _ = env.reset()
     score = 0
@@ -73,41 +67,112 @@ def main():
         cart_screen_x = int((cart_x_state / 4.8 + 0.5) * WIDTH)
         cart_screen_y = HEIGHT - 100
 
-        # Draw Background
-        screen.blit(background, (0, 0))
+        # Draw Background (Match HTML Canvas Color)
+        screen.fill((240, 249, 255)) # #f0f9ff
+        
+        # Draw Mascot (Top Right)
+        if mascot_img:
+            mascot_rect = mascot_img.get_rect(topright=(WIDTH - 20, 20))
+            screen.blit(mascot_img, mascot_rect)
 
-        # Draw Cart
-        cart_rect = cart_img.get_rect(center=(cart_screen_x, cart_screen_y))
-        screen.blit(cart_img, cart_rect)
+        # Draw Ground Line
+        pygame.draw.line(screen, (203, 213, 225), (50, HEIGHT - 80), (WIDTH - 50, HEIGHT - 80), 4) # #cbd5e1
 
-        # Draw Pole
-        # Note: Gymnasium theta=0 is vertical (up), theta increases clockwise.
-        # Pygame rotation: 0 is right, increases counter-clockwise.
-        # Conversion: pole_img is vertical up. We rotate by -theta (in degrees).
+        # Draw Cart (Yellow Rounded Rect)
+        # HTML: roundRect(screenX - 40, H - 100, 80, 40, 10)
+        cart_rect = pygame.Rect(0, 0, 80, 40)
+        cart_rect.centerx = cart_screen_x
+        cart_rect.bottom = HEIGHT - 80 - 20 + 40 # HTML draws at H-100. Ground is H-80? No HTML ground is H-80. Cart is at H-100 (floating?).
+        # HTML: ground at H-80. Cart at H-100. Cart is 80x40. 
+        # So Cart bottom is at H-60. Wait.
+        # HTML: ctx.roundRect(screenX - 40, H - 100, 80, 40, 10);
+        # Top-left is H-100. Height 40. Bottom is H-60.
+        # Ground line is H-80. So cart overlaps ground?
+        # Let's trust values.
+        
+        cart_y = HEIGHT - 100
+        cart_draw_rect = pygame.Rect(cart_screen_x - 40, cart_y, 80, 40)
+        
+        pygame.draw.rect(screen, (255, 206, 0), cart_draw_rect, border_radius=10) # #ffce00
+        pygame.draw.rect(screen, (51, 51, 51), cart_draw_rect, 2, border_radius=10) # Stroke #333
+
+        # Draw Wheels
+        # HTML: arc(screenX - 25, H - 65, 10...)
+        pygame.draw.circle(screen, (51, 51, 51), (cart_screen_x - 25, HEIGHT - 65), 10)
+        pygame.draw.circle(screen, (51, 51, 51), (cart_screen_x + 25, HEIGHT - 65), 10)
+
+        # Draw Pole (Red Rounded Rect)
+        # HTML: pivot is screenX, H-100.
+        # It translates to (screenX, H-100) then rotates.
+        # Rect is (-5, -120, 10, 120).
+        # So pivot is at the BOTTOM CENTER of the pole rect.
+        
+        # New Procedural Pole Surface
+        pole_surf = pygame.Surface((20, 140), pygame.SRCALPHA) # Bigger to fit ball
+        # Draw pole relative to its own center/pivot.
+        # We'll draw it upright then rotate.
+        # Rect local coords: (5, 10, 10, 120) -> perfectly centered horizontally (20 width).
+        # Bottom of rect at 130.
+        
+        # Actually easier: Draw pole primarily vertical, then rotate.
+        # Pole dims: 10 wide, 120 high.
+        # Color: #ff6b6b (255, 107, 107)
+        
+        # Create a surface for the pole for rotation
+        pole_w, pole_h = 10, 120
+        # Surface needs space for the ball on top too.
+        surf_w, surf_h = 40, 160
+        pole_surf = pygame.Surface((surf_w, surf_h), pygame.SRCALPHA)
+        
+        # Pivot point on surface: (surf_w/2, surf_h - 20) (arbitrary padding)
+        pivot_local = (surf_w//2, surf_h - 10)
+        
+        # Draw Rect
+        # Top-left of rect relative to pivot: (-5, -120)
+        rect_top_left = (pivot_local[0] - 5, pivot_local[1] - 120)
+        pygame.draw.rect(pole_surf, (255, 107, 107), (*rect_top_left, 10, 120), border_radius=5)
+        
+        # Draw Ball
+        # HTML: arc(0, -125, 8...)
+        # Center relative to pivot: (0, -125)
+        ball_center = (pivot_local[0], pivot_local[1] - 125)
+        ball_color = (255, 243, 64) # #fff340 (alive) - Assumed alive for visual
+        pygame.draw.circle(pole_surf, ball_color, ball_center, 8)
+
+        # Rotation
         angle_deg = -math.degrees(pole_angle)
+        rotated_pole = pygame.transform.rotate(pole_surf, angle_deg)
         
-        rotated_pole = pygame.transform.rotate(pole_img, angle_deg)
-        # We want the bottom of the pole to stay at the cart's center
-        # Pivot point is bottom center of the pole
-        # This is a bit tricky in Pygame, easiest way is to use the center of rotation
+        # Blit at pivot
+        # The pivot in valid screen coords is (cart_screen_x, HEIGHT - 100)
+        # We need to align the pivot_local of the rotated surf with this screen point.
         
-        # Calculate pivot position
-        pivot_x = cart_screen_x
-        pivot_y = cart_screen_y - 10
+        screen_pivot = (cart_screen_x, HEIGHT - 100)
+        rect = rotated_pole.get_rect()
         
-        pole_rect = rotated_pole.get_rect()
+        # Standard way to rotate around a pivot in Pygame:
+        # offset = pivot_local - center_of_image
+        # rotated_offset = offset.rotate(angle)
+        # rect.center = pivot + rotated_offset
+        # But we constructed the surface, we know the vector from center to pivot.
         
-        # Offset calculation to rotate around bottom center
-        # The center of the rotated rect shifts. We need the bottom center of the pole sprite
-        # to stay at (pivot_x, pivot_y).
-        # Before rotation, bottom center is (POLE_WIDTH/2, POLE_LENGTH)
-        # After rotation, we need to find where that point went.
+        # Simpler:
+        # 1. Start with rect centered at screen_pivot
+        rect.center = screen_pivot
+        # 2. Shift it. The pivot is NOT the center of the surface.
+        # The pivot on the unrotated surface is (surf_w/2, surf_h-10). The center is (surf_w/2, surf_h/2).
+        # Vector from Center -> Pivot = (0, (surf_h-10) - surf_h/2) = (0, surf_h/2 - 10)
+        # We need to apply the rotation to this vector.
         
-        # Simplified approach: 
-        offset = pygame.math.Vector2(0, -POLE_LENGTH / 2).rotate(-angle_deg)
-        pole_rect.center = (pivot_x, pivot_y) + offset
+        vec = pygame.math.Vector2(0, (surf_h/2 - 10)) # Vector from Center to Pivot (downwards)
+        vec_rot = vec.rotate(-angle_deg) # Rotate vector (remember y is down)
         
-        screen.blit(rotated_pole, pole_rect)
+        # The rect center should be such that: rect.center + vec_rot = screen_pivot
+        # So: rect.center = screen_pivot - vec_rot
+        
+        rect.center = (screen_pivot[0] - vec_rot.x, screen_pivot[1] - vec_rot.y)
+        
+        screen.blit(rotated_pole, rect)
 
         # Draw Score and UI
         score_surf = font.render(f"SCORE: {int(score)}", True, (255, 255, 255))
