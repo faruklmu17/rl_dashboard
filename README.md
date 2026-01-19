@@ -2,30 +2,26 @@
 
 Welcome to the **RL Dashboard** project! This repository contains a fun, interactive web-based implementation of the classic **CartPole** reinforcement learning problem, designed to be playable by humans (and robots!).
 
-## 🎮 The Game: Robo-Balance!
+## ⚡ 1-Minute Demo
 
-Help our friendly robot mascot keep the pole balanced on the cart! Use your keyboard or on-screen controls to push the cart left and right.
+### The Game (Human vs AI)
+Play manually or let the Robot Helper take over!
+![Gameplay](gameplay.png)
 
-### How to Play
-- **Goal**: Keep the pole upright for as long as possible!
-- **Controls**:
-    - **⬅️ Left Arrow / Button**: Push Cart Left
-    - **➡️ Right Arrow / Button**: Push Cart Right
-    - **🤖 Robot Helper**: Let the AI take over and show you how it's done!
-
-### Features
-- **Moon Gravity Physics 🌑**: Tuned for a relaxing, easy-to-play experience.
-- **Responsive Controls**: "Proportional Push" technology allows for miracle saves.
-- **Kid-Friendly UI**: colorful graphics, emojis, and a friendly robot companion.
+### The AI Training Dashboard
+Watch your AI agent get smarter in real-time.
+![Dashboard](dashboard.png)
 
 ## 🛠️ Technology
 - **HTML5 Canvas**: For smooth, 60fps physics rendering.
 - **Vanilla JavaScript**: No heavy frameworks, just pure code.
 - **CSS3**: Modern styling with gradients, shadows, and animations.
+- **Python (Gymnasium + Stable-Baselines3)**: For industrial-grade AI training.
+- **FastAPI / Uvicorn**: A lightweight server to visualize training data.
 
 ## 📦 Installation
 
-To run the Python components (Training & Server), you'll need to set up your environment:
+To run the Python components (Training & Server), set up your environment:
 
 1. **Create and Activate a Virtual Environment** (Recommended):
    ```bash
@@ -45,27 +41,58 @@ To run the Python components (Training & Server), you'll need to set up your env
    pip install -r requirements.txt
    ```
 
-## 🚀 Getting Started
-Simply open `rl_cartpole_details.html` in any modern web browser to start playing immediately!
+---
 
-## 🧠 Training the AI
-Want to see how the robot learns? You can train your own AI model and watch the progress live on the dashboard!
+## 🚀 Getting Started (Choose Your Lane)
 
-1. **Start the Dashboard Server**:
-   This serves the visualization page.
+### Lane 1: Just Playing 🎮
+**Goal**: Have fun, no coding required.
+1. Open `rl_cartpole_details.html` in any web browser (Chrome, Edge, Firefox).
+2. Use **Arrow Keys** to balance the pole.
+3. Click **"Robot Helper"** to see the AI play!
+
+### Lane 2: Monitoring the Dashboard 📊
+**Goal**: View the charts and valid training metrics.
+1. Activate your venv (see Installation).
+2. Start the server:
    ```bash
    uvicorn server:app --reload
    ```
-   *Open `http://127.0.0.1:8000` in your browser.*
+3. Open `http://127.0.0.1:8000` in your browser.
+   *(Note: The chart updates automatically when `metrics.json` changes)*
 
-2. **Run the Training Script**:
-   open a new terminal, This starts the Reinforcement Learning (PPO) process.
+### Lane 3: Training Your Own AI 🧠
+**Goal**: Run the actual training loop and produce data.
+1. Activate your venv.
+2. In a **new terminal**, run:
    ```bash
    python train.py
    ```
-
-3. **Watch it Learn**:
-   Go to the dashboard (`http://127.0.0.1:8000`) to see real-time graphs of the AI's performance as it gets smarter! 📈
+3. Watch the terminal for progress bars and the Dashboard for graphs!
 
 ---
-*"Balance is not something you find, it's something you create."* 🧘
+
+## 🔄 Data Pipeline (How it Works)
+1. **`train.py`**: Runs the PPO algorithm. Every 1,000 steps, it writes the latest stats (rewards, episodes) to `metrics.json`.
+2. **`metrics.json`**: Acts as the shared data bridge.
+3. **`server.py`**: Reads `metrics.json` and serves it as a JSON API endpoint (`/metrics`).
+4. **Dashboard (Frontend)**: Periodically fetches `/metrics` and updates the Live Chart.
+
+---
+
+## ❓ Common Issues
+
+### 1. "uvicorn not found"
+*   **Fix**: Ensure your virtual environment is activated (`(.venv)` should be in your prompt) and you ran `pip install -r requirements.txt`.
+
+### 2. "PermissionDenied" running Activate.ps1
+*   **Fix**: Windows restricts scripts by default. Run this in PowerShell as Administrator:
+    ```powershell
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+    ```
+
+### 3. Pygame window not opening / crashes
+*   **Fix**: Make sure you have a display environment (this won't work in headless cloud servers). Locally, ensure `pip install pygame` ran successfully.
+
+### 4. Dashboard says "Status: waiting..."
+*   **Fix**: This means `metrics.json` doesn't exist yet. Run `python train.py` for a few seconds to generate the first batch of data!
