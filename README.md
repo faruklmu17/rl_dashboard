@@ -29,9 +29,11 @@ To run the Python components (Training & Server), you'll need to set up your env
 
 1. **Create and Activate a Virtual Environment** (Recommended):
    ```bash
-   # Windows
-   python -m venv venv
-   .\venv\Scripts\activate
+   # Windows (PowerShell)
+   .\venv\Scripts\Activate.ps1
+
+   # Windows (cmd)
+   .\venv\Scripts\activate.bat
 
    # Mac/Linux
    python3 -m venv venv
