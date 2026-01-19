@@ -6,7 +6,7 @@ Welcome to the **RL Dashboard** project! This repository contains a fun, interac
 
 ### The Game (Human vs AI)
 Play manually or let the Robot Helper take over!
-![Gameplay](gameplay.webp)
+![Gameplay](gameplay.png)
 
 ### The AI Training Dashboard
 Watch your AI agent get smarter in real-time.
