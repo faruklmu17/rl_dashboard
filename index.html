@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>RL Live Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    canvas {
+      border: 1px solid #ccc;
+      width: 900px;
+      height: 300px;
+    }
+
+    .row {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>CartPole RL Training (Live)</h2>
+  <div class="row" id="status">Status: starting...</div>
+  <div class="row" id="summary"></div>
+  <button onclick="location.href='/details'"
+    style="background: #47cbd5; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; color: white;">Learn
+    How It Works 🍬</button>
+  <canvas id="chart" width="900" height="300"></canvas>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const summaryEl = document.getElementById("summary");
+    const canvas = document.getElementById("chart");
+    const ctx = canvas.getContext("2d");
+
+    function drawLine(data) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!data.length) return;
+
+      const maxY = Math.max(...data, 1);
+      const minY = Math.min(...data, 0);
+      const pad = 20;
+      const w = canvas.width - pad * 2;
+      const h = canvas.height - pad * 2;
+
+      ctx.beginPath();
+      data.forEach((y, i) => {
+        const x = pad + (i / (data.length - 1 || 1)) * w;
+        const norm = (y - minY) / (maxY - minY || 1);
+        const yy = pad + (1 - norm) * h;
+        if (i === 0) ctx.moveTo(x, yy);
+        else ctx.lineTo(x, yy);
+      });
+      ctx.stroke();
+    }
+
+    async function tick() {
+      const res = await fetch("/metrics", { cache: "no-store" });
+      const m = await res.json();
+
+      if (m.status === "waiting") {
+        statusEl.textContent = "Status: waiting for metrics.json...";
+        return;
+      }
+      statusEl.textContent = "Status: training...";
+      summaryEl.textContent =
+        `Timesteps: ${m.timesteps} | Episodes: ${m.episodes} | Avg reward (last 10): ${m.avg_reward_last_10.toFixed(2)}`;
+
+      drawLine(m.reward_history || []);
+    }
+
+    setInterval(tick, 1000);
+    tick();
+  </script>
+</body>
+
+</html>
